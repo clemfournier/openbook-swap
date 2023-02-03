@@ -326,11 +326,16 @@ fn apply_risk_checks(event: DidSwap) -> Result<()> {
 #[derive(Accounts)]
 pub struct InitAccount<'info> {
     #[account(mut)]
+    /// CHECK: test
     open_orders: AccountInfo<'info>,
     #[account(signer)]
+    /// CHECK: test
     authority: AccountInfo<'info>,
+    /// CHECK: test
     market: AccountInfo<'info>,
+    /// CHECK: test
     dex_program: AccountInfo<'info>,
+    /// CHECK: test
     rent: AccountInfo<'info>,
 }
 
@@ -348,12 +353,17 @@ impl<'info> From<&mut InitAccount<'info>> for dex::InitOpenOrders<'info> {
 #[derive(Accounts)]
 pub struct CloseAccount<'info> {
     #[account(mut)]
+    /// CHECK: test
     open_orders: AccountInfo<'info>,
     #[account(signer)]
+    /// CHECK: test
     authority: AccountInfo<'info>,
     #[account(mut)]
+    /// CHECK: test
     destination: AccountInfo<'info>,
+    /// CHECK: test
     market: AccountInfo<'info>,
+    /// CHECK: test
     dex_program: AccountInfo<'info>,
 }
 
@@ -373,15 +383,20 @@ impl<'info> From<&mut CloseAccount<'info>> for dex::CloseOpenOrders<'info> {
 // done by the DEX on CPI.
 #[derive(Accounts)]
 pub struct Swap<'info> {
+    /// CHECK: test
     pub market: MarketAccounts<'info>,
     #[account(signer)]
+    /// CHECK: test
     pub authority: AccountInfo<'info>,
     #[account(mut, constraint = pc_wallet.key != &empty::ID)]
+    /// CHECK: test
     pub pc_wallet: AccountInfo<'info>,
     // Programs.
+    /// CHECK: test
     pub dex_program: AccountInfo<'info>,
+    /// CHECK: test
     pub token_program: AccountInfo<'info>,
-    // Sysvars.
+    /// CHECK: test
     pub rent: AccountInfo<'info>,
 }
 
@@ -404,17 +419,24 @@ impl<'info> From<&Swap<'info>> for OrderbookClient<'info> {
 // the same on both markets since there's only one account field for it).
 #[derive(Accounts)]
 pub struct SwapTransitive<'info> {
+    /// CHECK: test
     pub from: MarketAccounts<'info>,
+    /// CHECK: test
     pub to: MarketAccounts<'info>,
     // Must be the authority over all open orders accounts used.
     #[account(signer)]
+    /// CHECK: test
     pub authority: AccountInfo<'info>,
     #[account(mut, constraint = pc_wallet.key != &empty::ID)]
+    /// CHECK: test
     pub pc_wallet: AccountInfo<'info>,
     // Programs.
+    /// CHECK: test
     pub dex_program: AccountInfo<'info>,
+    /// CHECK: test
     pub token_program: AccountInfo<'info>,
     // Sysvars.
+    /// CHECK: test
     pub rent: AccountInfo<'info>,
 }
 
@@ -444,11 +466,17 @@ impl<'info> SwapTransitive<'info> {
 // Client for sending orders to the Serum DEX.
 #[derive(Clone)]
 struct OrderbookClient<'info> {
+    /// CHECK: test
     market: MarketAccounts<'info>,
+    /// CHECK: test
     authority: AccountInfo<'info>,
+    /// CHECK: test
     pc_wallet: AccountInfo<'info>,
+    /// CHECK: test
     dex_program: AccountInfo<'info>,
+    /// CHECK: test
     token_program: AccountInfo<'info>,
+    /// CHECK: test
     rent: AccountInfo<'info>,
 }
 
@@ -590,35 +618,46 @@ fn coin_lots(market: &MarketState, size: u64) -> u64 {
 #[derive(Accounts, Clone)]
 pub struct MarketAccounts<'info> {
     #[account(mut)]
+    /// CHECK: test
     pub market: AccountInfo<'info>,
     #[account(mut)]
+    /// CHECK: test
     pub open_orders: AccountInfo<'info>,
     #[account(mut)]
+    /// CHECK: test
     pub request_queue: AccountInfo<'info>,
     #[account(mut)]
+    /// CHECK: test
     pub event_queue: AccountInfo<'info>,
     #[account(mut)]
+    /// CHECK: test
     pub bids: AccountInfo<'info>,
     #[account(mut)]
+    /// CHECK: test
     pub asks: AccountInfo<'info>,
     // The `spl_token::Account` that funds will be taken from, i.e., transferred
     // from the user into the market's vault.
     //
     // For bids, this is the base currency. For asks, the quote.
     #[account(mut, constraint = order_payer_token_account.key != &empty::ID)]
+    /// CHECK: test
     pub order_payer_token_account: AccountInfo<'info>,
     // Also known as the "base" currency. For a given A/B market,
     // this is the vault for the A mint.
     #[account(mut)]
+    /// CHECK: test
     pub coin_vault: AccountInfo<'info>,
     // Also known as the "quote" currency. For a given A/B market,
     // this is the vault for the B mint.
     #[account(mut)]
+    /// CHECK: test
     pub pc_vault: AccountInfo<'info>,
     // PDA owner of the DEX's token accounts for base + quote currencies.
+    /// CHECK: test
     pub vault_signer: AccountInfo<'info>,
     // User wallets.
     #[account(mut, constraint = coin_wallet.key != &empty::ID)]
+    /// CHECK: test
     pub coin_wallet: AccountInfo<'info>,
 }
 
@@ -662,30 +701,40 @@ fn _is_valid_swap<'info>(from: &AccountInfo<'info>, to: &AccountInfo<'info>) -> 
 #[event]
 pub struct DidSwap {
     // User given (max) amount  of the "from" token to swap.
+    /// CHECK: test
     pub given_amount: u64,
     // The minimum exchange rate for swapping `from_amount` to `to_amount` in
     // native units with decimals equal to the `to_amount`'s mint--specified
     // by the client.
+    /// CHECK: test
     pub min_exchange_rate: ExchangeRate,
     // Amount of the `from` token sold.
+    /// CHECK: test
     pub from_amount: u64,
     // Amount of the `to` token purchased.
+    /// CHECK: test
     pub to_amount: u64,
     // The amount of the quote currency used for a *transitive* swap. This is
     // the amount *received* for selling on the first leg of the swap.
+    /// CHECK: test
     pub quote_amount: u64,
     // Amount of the quote currency accumulated from a *transitive* swap, i.e.,
     // the difference between the amount gained from the first leg of the swap
     // (to sell) and the amount used in the second leg of the swap (to buy).
+    /// CHECK: test
     pub spill_amount: u64,
     // Mint sold.
+    /// CHECK: test
     pub from_mint: Pubkey,
     // Mint purchased.
+    /// CHECK: test
     pub to_mint: Pubkey,
     // Mint of the token used as the quote currency in the two markets used
     // for swapping.
+    /// CHECK: test
     pub quote_mint: Pubkey,
     // User that signed the transaction.
+    /// CHECK: test
     pub authority: Pubkey,
 }
 
@@ -695,11 +744,14 @@ pub struct ExchangeRate {
     // The amount of *to* tokens one should receive for a single *from token.
     // This number must be in native *to* units with the same amount of decimals
     // as the *to* mint.
+    /// CHECK: test
     pub rate: u64,
     // Number of decimals of the *from* token's mint.
+    /// CHECK: test
     pub from_decimals: u8,
     // Number of decimals of the *to* token's mint.
     // For a direct swap, this should be zero.
+    /// CHECK: test
     pub quote_decimals: u8,
     // True if *all* of the *from* currency sold should be used when calculating
     // the executed exchange rate.
@@ -719,6 +771,7 @@ pub struct ExchangeRate {
     // *to* mint received before calculating the swap's exchange rate.
     //
     // Transitive swaps only. For direct swaps, this field is ignored.
+    /// CHECK: test
     pub strict: bool,
 }
 

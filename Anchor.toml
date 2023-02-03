@@ -1,12 +1,16 @@
 anchor_version = "0.17.0"
 
 [provider]
-cluster = "localnet"
-wallet = "~/.config/solana/id.json"
+cluster = "devnet"
+wallet = "~/openbonk-swap/wallet/keypair.json"
+
+[programs.devnet]
+serum_swap = "5paKUq27CMiotwgCh6a4GTDi4NXtGxRo3oZVyr4QXNjM"
+serum_dex = { address = "srmqPvymJeFKQ4zGQed1GFppgkRHL9kaELCbyksJtPX", path = "./deps/serum-dex/dex/target/deploy/serum_dex.so" }
 
 [programs.mainnet]
 serum_swap = "22Y43yTVxuUkoRKdm9thyRhQ3SdgQS7c7kB6UNCiaczD"
-serum_dex = { address = "9xQeWvG816bUx9EPjHmaT23yvVM2ZWbrrpZb9PusVFin", path = "./deps/serum-dex/dex/target/deploy/serum_dex.so" }
+serum_dex = { address = "srmqPvymJeFKQ4zGQed1GFppgkRHL9kaELCbyksJtPX", path = "./deps/serum-dex/dex/target/deploy/serum_dex.so" }
 
 [[test.genesis]]
 address = "9xQeWvG816bUx9EPjHmaT23yvVM2ZWbrrpZb9PusVFin"

@@ -59,7 +59,7 @@ pub mod serum_swap {
     ///    whether the transaction should abort.
     #[access_control(is_valid_swap(&ctx))]
     pub fn swap<'info>(
-        ctx: Context<'_, '_, '_, 'info, Swap<'info>>,
+            : Context<'_, '_, '_, 'info, Swap<'info>>,
         side: Side,
         amount: u64,
         min_exchange_rate: ExchangeRate,

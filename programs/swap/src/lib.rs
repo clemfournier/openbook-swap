@@ -8,13 +8,15 @@
 //! transactions.
 
 use anchor_lang::prelude::*;
-use anchor_spl::dex;
-use anchor_spl::dex::serum_dex::instruction::SelfTradeBehavior;
-use anchor_spl::dex::serum_dex::matching::{OrderType, Side as SerumSide};
-use anchor_spl::dex::serum_dex::state::MarketState;
+use anchor_lang::{Accounts, CpiContext, ToAccountInfos};
+use openbook_dex::state::MarketState;
+// use anchor_spl::dex;
+// use anchor_spl::dex::serum_dex::matching::{Side as SerumSide};
+// use anchor_spl::dex::serum_dex::state::MarketState;
 use anchor_spl::token;
 use solana_program::declare_id;
 use std::num::NonZeroU64;
+use std::str::FromStr;
 
 declare_id!("5paKUq27CMiotwgCh6a4GTDi4NXtGxRo3oZVyr4QXNjM");
 
@@ -29,20 +31,20 @@ pub mod serum_swap {
     use super::*;
 
     /// Convenience API to initialize an open orders account on the Serum DEX.
-    pub fn init_account<'info>(ctx: Context<'_, '_, '_, 'info, InitAccount<'info>>) -> Result<()> {
-        let ctx = CpiContext::new(ctx.accounts.dex_program.clone(), ctx.accounts.into());
-        dex::init_open_orders(ctx)?;
-        Ok(())
-    }
+    // pub fn init_account<'info>(ctx: Context<'_, '_, '_, 'info, InitAccount<'info>>) -> Result<()> {
+    //     let ctx = CpiContext::new(ctx.accounts.dex_program.clone(), ctx.accounts.into());
+    //     dex::init_open_orders(ctx)?;
+    //     Ok(())
+    // }
 
     /// Convenience API to close an open orders account on the Serum DEX.
-    pub fn close_account<'info>(
-        ctx: Context<'_, '_, '_, 'info, CloseAccount<'info>>,
-    ) -> Result<()> {
-        let ctx = CpiContext::new(ctx.accounts.dex_program.clone(), ctx.accounts.into());
-        dex::close_open_orders(ctx)?;
-        Ok(())
-    }
+    // pub fn close_account<'info>(
+    //     ctx: Context<'_, '_, '_, 'info, CloseAccount<'info>>,
+    // ) -> Result<()> {
+    //     let ctx = CpiContext::new(ctx.accounts.dex_program.clone(), ctx.accounts.into());
+    //     dex::close_open_orders(ctx)?;
+    //     Ok(())
+    // }
 
     /// Swaps two tokens on a single A/B market, where A is the base currency
     /// and B is the quote currency. This is just a direct IOC trade that
@@ -66,28 +68,41 @@ pub mod serum_swap {
     ) -> Result<()> {
         let mut min_exchange_rate = min_exchange_rate;
 
+        let name = "Chippie";
+        solana_program::log::sol_log(&format!("This is a log message for {}", name));
+
         // Not used for direct swaps.
         min_exchange_rate.quote_decimals = 0;
-
+        
         // Optional referral account (earns a referral fee).
         let referral = ctx.remaining_accounts.iter().next().map(Clone::clone);
-
+        
         // Side determines swap direction.
         let (from_token, to_token) = match side {
             Side::Bid => (&ctx.accounts.pc_wallet, &ctx.accounts.market.coin_wallet),
             Side::Ask => (&ctx.accounts.market.coin_wallet, &ctx.accounts.pc_wallet),
         };
-
+        
         // Token balances before the trade.
         let from_amount_before = token::accessor::amount(from_token)?;
         let to_amount_before = token::accessor::amount(to_token)?;
 
+        solana_program::log::sol_log(&format!("From {} - {}, To {} - {}", format!("{:?}", &ctx.accounts.market.coin_wallet.key), from_amount_before, format!("{:?}", &ctx.accounts.pc_wallet.key), to_amount_before));
+        solana_program::log::sol_log(&format!("Amount {}", amount));
+        
         // Execute trade.
         let orderbook: OrderbookClient<'info> = (&*ctx.accounts).into();
         match side {
             Side::Bid => orderbook.buy(amount, None)?,
             Side::Ask => orderbook.sell(amount, None)?,
         };
+
+        solana_program::log::sol_log(&format!("Order sent!"));
+
+        Ok(())
+
+        /*
+        
         orderbook.settle(referral)?;
 
         // Token balances after the trade.
@@ -116,6 +131,7 @@ pub mod serum_swap {
         })?;
 
         Ok(())
+        */
     }
 
     /// Swaps two base currencies across two different markets.
@@ -151,7 +167,7 @@ pub mod serum_swap {
             // Execute the trade.
             let orderbook = ctx.accounts.orderbook_from();
             orderbook.sell(amount, None)?;
-            orderbook.settle(referral.clone())?;
+            // orderbook.settle(referral.clone())?;
 
             // Token balances after the trade.
             let base_after = token::accessor::amount(&ctx.accounts.from.coin_wallet)?;
@@ -173,7 +189,7 @@ pub mod serum_swap {
             // Execute the trade.
             let orderbook = ctx.accounts.orderbook_to();
             orderbook.buy(sell_proceeds, None)?;
-            orderbook.settle(referral)?;
+            // orderbook.settle(referral)?;
 
             // Token balances after the trade.
             let base_after = token::accessor::amount(&ctx.accounts.to.coin_wallet)?;
@@ -339,16 +355,16 @@ pub struct InitAccount<'info> {
     rent: AccountInfo<'info>,
 }
 
-impl<'info> From<&mut InitAccount<'info>> for dex::InitOpenOrders<'info> {
-    fn from(accs: &mut InitAccount<'info>) -> dex::InitOpenOrders<'info> {
-        dex::InitOpenOrders {
-            open_orders: accs.open_orders.clone(),
-            authority: accs.authority.clone(),
-            market: accs.market.clone(),
-            rent: accs.rent.clone(),
-        }
-    }
-}
+// impl<'info> From<&mut InitAccount<'info>> for dex::InitOpenOrders<'info> {
+//     fn from(accs: &mut InitAccount<'info>) -> dex::InitOpenOrders<'info> {
+//         dex::InitOpenOrders {
+//             open_orders: accs.open_orders.clone(),
+//             authority: accs.authority.clone(),
+//             market: accs.market.clone(),
+//             rent: accs.rent.clone(),
+//         }
+//     }
+// }
 
 #[derive(Accounts)]
 pub struct CloseAccount<'info> {
@@ -367,16 +383,16 @@ pub struct CloseAccount<'info> {
     dex_program: AccountInfo<'info>,
 }
 
-impl<'info> From<&mut CloseAccount<'info>> for dex::CloseOpenOrders<'info> {
-    fn from(accs: &mut CloseAccount<'info>) -> dex::CloseOpenOrders<'info> {
-        dex::CloseOpenOrders {
-            open_orders: accs.open_orders.clone(),
-            authority: accs.authority.clone(),
-            destination: accs.destination.clone(),
-            market: accs.market.clone(),
-        }
-    }
-}
+// impl<'info> From<&mut CloseAccount<'info>> for dex::CloseOpenOrders<'info> {
+//     fn from(accs: &mut CloseAccount<'info>) -> dex::CloseOpenOrders<'info> {
+//         dex::CloseOpenOrders {
+//             open_orders: accs.open_orders.clone(),
+//             authority: accs.authority.clone(),
+//             destination: accs.destination.clone(),
+//             market: accs.market.clone(),
+//         }
+//     }
+// }
 
 // The only constraint imposed on these accounts is that the market's base
 // currency mint is not equal to the quote currency's. All other checks are
@@ -492,12 +508,28 @@ impl<'info> OrderbookClient<'info> {
         srm_msrm_discount: Option<AccountInfo<'info>>,
     ) -> ProgramResult {
         let limit_price = 1;
-        let max_coin_qty = {
+
+        solana_program::log::sol_log(&format!("In SELL - Step 1 - {} - {}", limit_price, base_amount));
+        // solana_program::log::sol_log(&format!("Market - Step 1.5 - {} - {} - {}", &self.market.market.key.to_string(), &dex::ID.to_string(), &anchor_lang::prelude::Pubkey::from_str("DxoYTcpvNzZUcWTRWhtnXeyVqSYyca1J8QydsBg4Tspq").unwrap().to_string()));
+        
+        // let market = MarketState::load(&self.market.market, &anchor_lang::prelude::Pubkey::from_str("srmqPvymJeFKQ4zGQed1GFppgkRHL9kaELCbyksJtPX").unwrap())?; // &dex::ID)?;
+        
+        // solana_program::log::sol_log(&format!("Market loaded"));
+
+        // let max_coin_qty = {
             // The loaded market must be dropped before CPI.
-            let market = MarketState::load(&self.market.market, &dex::ID)?;
-            coin_lots(&market, base_amount)
-        };
+
+        //     let market = MarketState::load(&self.market.market, &anchor_lang::prelude::Pubkey::from_str("srmqPvymJeFKQ4zGQed1GFppgkRHL9kaELCbyksJtPX").unwrap())?; // &dex::ID)?;
+        //     solana_program::log::sol_log(&format!("Market loaded"));
+        //     coin_lots(&market, base_amount)
+        // };
+
+        
         let max_native_pc_qty = u64::MAX;
+        
+        // TO REMOVE, JUST FOR TEST
+        let max_coin_qty = u64::MAX;
+        solana_program::log::sol_log(&format!("In SELL - Step 2 - {}", max_coin_qty));
         self.order_cpi(
             limit_price,
             max_coin_qty,
@@ -552,61 +584,105 @@ impl<'info> OrderbookClient<'info> {
         // before giving up and posting the remaining unmatched order.
         let limit = 65535;
 
-        let mut ctx = CpiContext::new(self.dex_program.clone(), self.clone().into());
-        if let Some(srm_msrm_discount) = srm_msrm_discount {
-            ctx = ctx.with_remaining_accounts(vec![srm_msrm_discount]);
-        }
-        dex::new_order_v3(
-            ctx,
-            side.into(),
+        solana_program::log::sol_log(&format!("In ORDER CPI {} - {} - {}", limit_price, max_coin_qty, max_native_pc_qty));
+
+        let mut ctx: CpiContext<'_, '_, '_, 'info, Accounts<'info>> = CpiContext::new(self.dex_program.clone(), self.clone().into());
+
+        // solana_program::log::sol_log(&format!("Created CPI context {}", ctx.program.key.to_string()));
+
+        // if let Some(srm_msrm_discount) = srm_msrm_discount {
+        //     ctx = ctx.with_remaining_accounts(vec![srm_msrm_discount]);
+        // }
+
+        solana_program::log::sol_log(&format!("Try sending order..."));
+
+        let ix =openbook_dex::instruction::new_order(
+            &anchor_lang::prelude::Pubkey::from_str("srmqPvymJeFKQ4zGQed1GFppgkRHL9kaELCbyksJtPX").unwrap(),
+            &anchor_lang::prelude::Pubkey::from_str("9nkEoDdzVzQ3qKaCJvfWTBj8tV1Y6znuSqE1ASGZjJeS").unwrap(),
+            &anchor_lang::prelude::Pubkey::from_str("9b1T1uPhccjYEad4kRbbRAaxduWdes9w3oRiyaPg4Uoz").unwrap(),
+            &anchor_lang::prelude::Pubkey::from_str("35ShUKkguZFKfsyKnj3TTUv7ANEuv6ZXaqz26fF4EtPt").unwrap(),
+            &anchor_lang::prelude::Pubkey::from_str("8jF98zHwXG9c2vmczCopirtJteDbhW55RnsiSNvDoLmG").unwrap(),
+            &anchor_lang::prelude::Pubkey::from_str("BQrutxj2QZGSgAWpzWw8SVFvUuMpE9pzJs7DJXxU3p44").unwrap(),
+            &anchor_lang::prelude::Pubkey::from_str("CKGqQpj8j5dQ5DSSuPeJDvKNhcVUchWohL37ETA3dFV7").unwrap(),
+            &anchor_lang::prelude::Pubkey::from_str("CKGqQpj8j5dQ5DSSuPeJDvKNhcVUchWohL37ETA3dFV7").unwrap(),
+            &anchor_lang::prelude::Pubkey::from_str("5Q4dPeSkn4P2tsfJkFP8PKmUgWEy3Bpafqk2N4ou2A6b").unwrap(),
+            &anchor_lang::prelude::Pubkey::from_str("D96Rd4A6nCvNA6h4RNEerRwh4os5mmQ3PkHjM5wMx2SQ").unwrap(),
+            &anchor_lang::prelude::Pubkey::from_str("DxoYTcpvNzZUcWTRWhtnXeyVqSYyca1J8QydsBg4Tspq").unwrap(),
+            &anchor_lang::prelude::Pubkey::from_str("DxoYTcpvNzZUcWTRWhtnXeyVqSYyca1J8QydsBg4Tspq").unwrap(), // ??
+            Some(&anchor_lang::prelude::Pubkey::from_str("DxoYTcpvNzZUcWTRWhtnXeyVqSYyca1J8QydsBg4Tspq").unwrap()),
+            &anchor_lang::prelude::Pubkey::from_str("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA").unwrap(),
+            openbook_dex::matching::Side::Ask,
             NonZeroU64::new(limit_price).unwrap(),
             NonZeroU64::new(max_coin_qty).unwrap(),
-            NonZeroU64::new(max_native_pc_qty).unwrap(),
-            SelfTradeBehavior::DecrementTake,
-            OrderType::ImmediateOrCancel,
+            openbook_dex::matching::OrderType::ImmediateOrCancel,
             client_order_id,
+            openbook_dex::instruction::SelfTradeBehavior::AbortTransaction,
             limit,
-        )
+            NonZeroU64::new(limit_price).unwrap(),
+            10
+        );
+
+        // solana_program::program::invoke_signed(
+        //     &ix,
+        //     self.clone().into(),
+        //     signers_seeds
+        // )?;
+
+        solana_program::log::sol_log(&format!("Order sent! {}", ix.is_ok()));
+
+        return Ok(());
+
+        // dex::new_order_v3(
+        //     ctx,
+        //     side.into(),
+        //     NonZeroU64::new(limit_price).unwrap(),
+        //     NonZeroU64::new(max_coin_qty).unwrap(),
+        //     NonZeroU64::new(max_native_pc_qty).unwrap(),
+        //     SelfTradeBehavior::DecrementTake,
+        //     OrderType::ImmediateOrCancel,
+        //     client_order_id,
+        //     limit,
+        // )
     }
 
-    fn settle(&self, referral: Option<AccountInfo<'info>>) -> ProgramResult {
-        let settle_accs = dex::SettleFunds {
-            market: self.market.market.clone(),
-            open_orders: self.market.open_orders.clone(),
-            open_orders_authority: self.authority.clone(),
-            coin_vault: self.market.coin_vault.clone(),
-            pc_vault: self.market.pc_vault.clone(),
-            coin_wallet: self.market.coin_wallet.clone(),
-            pc_wallet: self.pc_wallet.clone(),
-            vault_signer: self.market.vault_signer.clone(),
-            token_program: self.token_program.clone(),
-        };
-        let mut ctx = CpiContext::new(self.dex_program.clone(), settle_accs);
-        if let Some(referral) = referral {
-            ctx = ctx.with_remaining_accounts(vec![referral]);
-        }
-        dex::settle_funds(ctx)
-    }
+    // fn settle(&self, referral: Option<AccountInfo<'info>>) -> ProgramResult {
+    //     let settle_accs = dex::SettleFunds {
+    //         market: self.market.market.clone(),
+    //         open_orders: self.market.open_orders.clone(),
+    //         open_orders_authority: self.authority.clone(),
+    //         coin_vault: self.market.coin_vault.clone(),
+    //         pc_vault: self.market.pc_vault.clone(),
+    //         coin_wallet: self.market.coin_wallet.clone(),
+    //         pc_wallet: self.pc_wallet.clone(),
+    //         vault_signer: self.market.vault_signer.clone(),
+    //         token_program: self.token_program.clone(),
+    //     };
+    //     let mut ctx = CpiContext::new(self.dex_program.clone(), settle_accs);
+    //     if let Some(referral) = referral {
+    //         ctx = ctx.with_remaining_accounts(vec![referral]);
+    //     }
+    //     dex::settle_funds(ctx)
+    // }
 }
 
-impl<'info> From<OrderbookClient<'info>> for dex::NewOrderV3<'info> {
-    fn from(c: OrderbookClient<'info>) -> dex::NewOrderV3<'info> {
-        dex::NewOrderV3 {
-            market: c.market.market.clone(),
-            open_orders: c.market.open_orders.clone(),
-            request_queue: c.market.request_queue.clone(),
-            event_queue: c.market.event_queue.clone(),
-            market_bids: c.market.bids.clone(),
-            market_asks: c.market.asks.clone(),
-            order_payer_token_account: c.market.order_payer_token_account.clone(),
-            open_orders_authority: c.authority.clone(),
-            coin_vault: c.market.coin_vault.clone(),
-            pc_vault: c.market.pc_vault.clone(),
-            token_program: c.token_program.clone(),
-            rent: c.rent.clone(),
-        }
-    }
-}
+// impl<'info> From<OrderbookClient<'info>> for dex::NewOrderV3<'info> {
+//     fn from(c: OrderbookClient<'info>) -> dex::NewOrderV3<'info> {
+//         dex::NewOrderV3 {
+//             market: c.market.market.clone(),
+//             open_orders: c.market.open_orders.clone(),
+//             request_queue: c.market.request_queue.clone(),
+//             event_queue: c.market.event_queue.clone(),
+//             market_bids: c.market.bids.clone(),
+//             market_asks: c.market.asks.clone(),
+//             order_payer_token_account: c.market.order_payer_token_account.clone(),
+//             open_orders_authority: c.authority.clone(),
+//             coin_vault: c.market.coin_vault.clone(),
+//             pc_vault: c.market.pc_vault.clone(),
+//             token_program: c.token_program.clone(),
+//             rent: c.rent.clone(),
+//         }
+//     }
+// }
 
 // Returns the amount of lots for the base currency of a trade with `size`.
 fn coin_lots(market: &MarketState, size: u64) -> u64 {
@@ -667,14 +743,14 @@ pub enum Side {
     Ask,
 }
 
-impl From<Side> for SerumSide {
-    fn from(side: Side) -> SerumSide {
-        match side {
-            Side::Bid => SerumSide::Bid,
-            Side::Ask => SerumSide::Ask,
-        }
-    }
-}
+// impl From<Side> for SerumSide {
+//     fn from(side: Side) -> SerumSide {
+//         match side {
+//             Side::Bid => SerumSide::Bid,
+//             Side::Ask => SerumSide::Ask,
+//         }
+//     }
+// }
 
 // Access control modifiers.
 
